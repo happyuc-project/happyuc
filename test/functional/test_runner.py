@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2017 The Bitcoin Core developers
+# Copyright (c) 2014-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Run regression test suite.
@@ -15,7 +15,6 @@ For a description of arguments recognized by test scripts, see
 """
 
 import argparse
-from collections import deque
 import configparser
 import datetime
 import os
@@ -78,23 +77,19 @@ BASE_SCRIPTS= [
     'abandonconflict.py',
     'bip68-112-113-p2p.py',
     'rawtransactions.py',
-    'address_types.py',
     'reindex.py',
     # vv Tests less than 30s vv
     'keypool-topup.py',
     'zmq_test.py',
-    'bitcoin_cli.py',
     'mempool_resurrect_test.py',
     'txn_doublespend.py --mineblock',
     'txn_clone.py',
-    'txn_clone.py --segwit',
     'getchaintips.py',
     'rest.py',
     'mempool_spendcoinbase.py',
     'mempool_reorg.py',
     'mempool_persist.py',
     'multiwallet.py',
-    'multiwallet.py --usecli',
     'httpbasics.py',
     'multi_rpc.py',
     'proxy_test.py',
@@ -102,7 +97,6 @@ BASE_SCRIPTS= [
     'disconnect_ban.py',
     'decodescript.py',
     'blockchain.py',
-    'deprecated_rpc.py',
     'disablewallet.py',
     'net.py',
     'keypool.py',
@@ -112,6 +106,7 @@ BASE_SCRIPTS= [
     'invalidtxrequest.py',
     'p2p-versionbits-warning.py',
     'preciousblock.py',
+    'test_script_address2.py',
     'importprunedfunds.py',
     'signmessages.py',
     'nulldummy.py',
@@ -126,15 +121,6 @@ BASE_SCRIPTS= [
     'bip65-cltv-p2p.py',
     'uptime.py',
     'resendwallettransactions.py',
-    'minchainwork.py',
-    'p2p-fingerprint.py',
-    'uacomment.py',
-    'p2p-acceptblock.py',
-    'feature_logging.py',
-    'node_network_limited.py',
-    'conf_args.py',
-    # Don't append tests at the end to avoid merge conflicts
-    # Put them in a random line within the section that fits their approximate run-time
 ]
 
 EXTENDED_SCRIPTS = [
@@ -160,8 +146,9 @@ EXTENDED_SCRIPTS = [
     'example_test.py',
     'txn_doublespend.py',
     'txn_clone.py --mineblock',
-    'notifications.py',
+    'forknotify.py',
     'invalidateblock.py',
+    'p2p-acceptblock.py',
     'replace-by-fee.py',
 ]
 
@@ -183,9 +170,8 @@ def main():
                                      epilog='''
     Help text and arguments for individual test script:''',
                                      formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--combinedlogslen', '-c', type=int, default=0, help='print a combined log (of length n lines) from all test nodes and test framework to the console on failure.')
     parser.add_argument('--coverage', action='store_true', help='generate a basic coverage report for the RPC interface')
-    parser.add_argument('--exclude', '-x', help='specify a comma-separated-list of scripts to exclude.')
+    parser.add_argument('--exclude', '-x', help='specify a comma-seperated-list of scripts to exclude.')
     parser.add_argument('--extended', action='store_true', help='run the extended test suite in addition to the basic tests')
     parser.add_argument('--force', '-f', action='store_true', help='run tests even on platforms where they are disabled by default (e.g. windows).')
     parser.add_argument('--help', '-h', '-?', action='store_true', help='print help text and exit')
@@ -211,7 +197,7 @@ def main():
     logging.basicConfig(format='%(message)s', level=logging_level)
 
     # Create base test directory
-    tmpdir = "%s/bitcoin_test_runner_%s" % (args.tmpdirprefix, datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
+    tmpdir = "%s/happyuc_test_runner_%s" % (args.tmpdirprefix, datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
     os.makedirs(tmpdir)
 
     logging.debug("Temporary test directory at %s" % tmpdir)
@@ -227,7 +213,7 @@ def main():
         sys.exit(0)
 
     if not (enable_wallet and enable_utils and enable_bitcoind):
-        print("No functional tests to run. Wallet, utils, and bitcoind must all be enabled")
+        print("No functional tests to run. Wallet, utils, and happyucd must all be enabled")
         print("Rerun `configure` with -enable-wallet, -with-utils and -with-daemon and rerun make")
         sys.exit(0)
 
@@ -272,18 +258,17 @@ def main():
         sys.exit(0)
 
     check_script_list(config["environment"]["SRCDIR"])
-    check_script_prefixes()
 
     if not args.keepcache:
         shutil.rmtree("%s/test/cache" % config["environment"]["BUILDDIR"], ignore_errors=True)
 
-    run_tests(test_list, config["environment"]["SRCDIR"], config["environment"]["BUILDDIR"], config["environment"]["EXEEXT"], tmpdir, args.jobs, args.coverage, passon_args, args.combinedlogslen)
+    run_tests(test_list, config["environment"]["SRCDIR"], config["environment"]["BUILDDIR"], config["environment"]["EXEEXT"], tmpdir, args.jobs, args.coverage, passon_args)
 
-def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_coverage=False, args=[], combined_logs_len=0):
+def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_coverage=False, args=[]):
     # Warn if bitcoind is already running (unix only)
     try:
-        if subprocess.check_output(["pidof", "bitcoind"]) is not None:
-            print("%sWARNING!%s There is already a bitcoind process running on this system. Tests may fail unexpectedly due to resource contention!" % (BOLD[1], BOLD[0]))
+        if subprocess.check_output(["pidof", "happyucd"]) is not None:
+            print("%sWARNING!%s There is already a happyucd process running on this system. Tests may fail unexpectedly due to resource contention!" % (BOLD[1], BOLD[0]))
     except (OSError, subprocess.SubprocessError):
         pass
 
@@ -293,9 +278,8 @@ def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_cove
         print("%sWARNING!%s There is a cache directory here: %s. If tests fail unexpectedly, try deleting the cache directory." % (BOLD[1], BOLD[0], cache_dir))
 
     #Set env vars
-    if "BITCOIND" not in os.environ:
-        os.environ["BITCOIND"] = build_dir + '/src/bitcoind' + exeext
-        os.environ["BITCOINCLI"] = build_dir + '/src/bitcoin-cli' + exeext
+    if "HAPPYUCD" not in os.environ:
+        os.environ["HAPPYUCD"] = build_dir + '/src/happyucd' + exeext
 
     tests_dir = src_dir + '/test/functional/'
 
@@ -311,11 +295,7 @@ def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_cove
 
     if len(test_list) > 1 and jobs > 1:
         # Populate cache
-        try:
-            subprocess.check_output([tests_dir + 'create_cache.py'] + flags + ["--tmpdir=%s/cache" % tmpdir])
-        except Exception as e:
-            print(e.output)
-            raise e
+        subprocess.check_output([tests_dir + 'create_cache.py'] + flags + ["--tmpdir=%s/cache" % tmpdir])
 
     #Run Tests
     job_queue = TestHandler(jobs, tests_dir, tmpdir, test_list, flags)
@@ -325,7 +305,7 @@ def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_cove
     max_len_name = len(max(test_list, key=len))
 
     for _ in range(len(test_list)):
-        test_result, testdir, stdout, stderr = job_queue.get_next()
+        test_result, stdout, stderr = job_queue.get_next()
         test_results.append(test_result)
 
         if test_result.status == "Passed":
@@ -336,14 +316,6 @@ def run_tests(test_list, src_dir, build_dir, exeext, tmpdir, jobs=1, enable_cove
             print("\n%s%s%s failed, Duration: %s s\n" % (BOLD[1], test_result.name, BOLD[0], test_result.time))
             print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
             print(BOLD[1] + 'stderr:\n' + BOLD[0] + stderr + '\n')
-            if combined_logs_len and os.path.isdir(testdir):
-                # Print the final `combinedlogslen` lines of the combined logs
-                print('{}Combine the logs and print the last {} lines ...{}'.format(BOLD[1], combined_logs_len, BOLD[0]))
-                print('\n============')
-                print('{}Combined log for {}:{}'.format(BOLD[1], testdir, BOLD[0]))
-                print('============\n')
-                combined_logs, _ = subprocess.Popen([os.path.join(tests_dir, 'combine_logs.py'), '-c', testdir], universal_newlines=True, stdout=subprocess.PIPE).communicate()
-                print("\n".join(deque(combined_logs.splitlines(), combined_logs_len)))
 
     print_results(test_results, max_len_name, (int(time.time() - time0)))
 
@@ -381,7 +353,7 @@ def print_results(test_results, max_len_name, runtime):
 
 class TestHandler:
     """
-    Trigger the test scripts passed in via the list.
+    Trigger the testscrips passed in via the list.
     """
 
     def __init__(self, num_tests_parallel, tests_dir, tmpdir, test_list=None, flags=None):
@@ -408,15 +380,13 @@ class TestHandler:
             log_stdout = tempfile.SpooledTemporaryFile(max_size=2**16)
             log_stderr = tempfile.SpooledTemporaryFile(max_size=2**16)
             test_argv = t.split()
-            testdir = "{}/{}_{}".format(self.tmpdir, re.sub(".py$", "", test_argv[0]), portseed)
-            tmpdir_arg = ["--tmpdir={}".format(testdir)]
+            tmpdir = ["--tmpdir=%s/%s_%s" % (self.tmpdir, re.sub(".py$", "", test_argv[0]), portseed)]
             self.jobs.append((t,
                               time.time(),
-                              subprocess.Popen([self.tests_dir + test_argv[0]] + test_argv[1:] + self.flags + portseed_arg + tmpdir_arg,
+                              subprocess.Popen([self.tests_dir + test_argv[0]] + test_argv[1:] + self.flags + portseed_arg + tmpdir,
                                                universal_newlines=True,
                                                stdout=log_stdout,
                                                stderr=log_stderr),
-                              testdir,
                               log_stdout,
                               log_stderr))
         if not self.jobs:
@@ -425,7 +395,7 @@ class TestHandler:
             # Return first proc that finishes
             time.sleep(.5)
             for j in self.jobs:
-                (name, time0, proc, testdir, log_out, log_err) = j
+                (name, time0, proc, log_out, log_err) = j
                 if os.getenv('TRAVIS') == 'true' and int(time.time() - time0) > 20 * 60:
                     # In travis, timeout individual tests after 20 minutes (to stop tests hanging and not
                     # providing useful output.
@@ -443,7 +413,7 @@ class TestHandler:
                     self.num_running -= 1
                     self.jobs.remove(j)
 
-                    return TestResult(name, status, int(time.time() - time0)), testdir, stdout, stderr
+                    return TestResult(name, status, int(time.time() - time0)), stdout, stderr
             print('.', end='', flush=True)
 
 class TestResult():
@@ -471,28 +441,6 @@ class TestResult():
         return self.status != "Failed"
 
 
-def check_script_prefixes():
-    """Check that no more than `EXPECTED_VIOLATION_COUNT` of the
-       test scripts don't start with one of the allowed name prefixes."""
-    EXPECTED_VIOLATION_COUNT = 77
-
-    # LEEWAY is provided as a transition measure, so that pull-requests
-    # that introduce new tests that don't conform with the naming
-    # convention don't immediately cause the tests to fail.
-    LEEWAY = 10
-
-    good_prefixes_re = re.compile("(example|feature|interface|mempool|mining|p2p|rpc|wallet)_")
-    bad_script_names = [script for script in ALL_SCRIPTS if good_prefixes_re.match(script) is None]
-
-    if len(bad_script_names) < EXPECTED_VIOLATION_COUNT:
-        print("{}HURRAY!{} Number of functional tests violating naming convention reduced!".format(BOLD[1], BOLD[0]))
-        print("Consider reducing EXPECTED_VIOLATION_COUNT from %d to %d" % (EXPECTED_VIOLATION_COUNT, len(bad_script_names)))
-    elif len(bad_script_names) > EXPECTED_VIOLATION_COUNT:
-        print("INFO: %d tests not meeting naming conventions (expected %d):" % (len(bad_script_names), EXPECTED_VIOLATION_COUNT))
-        print("  %s" % ("\n  ".join(sorted(bad_script_names))))
-        assert len(bad_script_names) <= EXPECTED_VIOLATION_COUNT + LEEWAY, "Too many tests not following naming convention! (%d found, expected: <= %d)" % (len(bad_script_names), EXPECTED_VIOLATION_COUNT)
-
-
 def check_script_list(src_dir):
     """Check scripts directory.
 
@@ -507,7 +455,7 @@ def check_script_list(src_dir):
             # On travis this warning is an error to prevent merging incomplete commits into master
             sys.exit(1)
 
-class RPCCoverage():
+class RPCCoverage(object):
     """
     Coverage reporting utilities for test_runner.
 

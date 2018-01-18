@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2017 The Bitcoin Core developers
+# Copyright (c) 2014-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test running bitcoind with -reindex and -reindex-chainstate options.
@@ -15,7 +15,8 @@ import time
 
 class ReindexTest(BitcoinTestFramework):
 
-    def set_test_params(self):
+    def __init__(self):
+        super().__init__()
         self.setup_clean_chain = True
         self.num_nodes = 1
 
@@ -24,7 +25,7 @@ class ReindexTest(BitcoinTestFramework):
         blockcount = self.nodes[0].getblockcount()
         self.stop_nodes()
         extra_args = [["-reindex-chainstate" if justchainstate else "-reindex", "-checkblockindex=1"]]
-        self.start_nodes(extra_args)
+        self.nodes = self.start_nodes(self.num_nodes, self.options.tmpdir, extra_args)
         while self.nodes[0].getblockcount() < blockcount:
             time.sleep(0.1)
         assert_equal(self.nodes[0].getblockcount(), blockcount)

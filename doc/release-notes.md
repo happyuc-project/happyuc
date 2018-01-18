@@ -1,12 +1,8 @@
-(note: this is a temporary file, to be added-to by anybody, and moved to
-release-notes at release time)
+Bitcoin Core version *0.15.0.1* is now available from:
 
-Bitcoin Core version *version* is now available from:
+  <https://bitcoin.org/bin/bitcoin-core-0.15.0.1/>
 
-  <https://bitcoin.org/bin/bitcoin-core-*version*/>
-
-This is a new major version release, including new features, various bugfixes
-and performance improvements, as well as updated translations.
+This is a minor bug fix for 0.15.0.
 
 Please report bugs using the issue tracker at GitHub:
 
@@ -20,13 +16,17 @@ How to Upgrade
 ==============
 
 If you are running an older version, shut it down. Wait until it has completely
-shut down (which might take a few minutes for older versions), then run the
+shut down (which might take a few minutes for older versions), then run the 
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
 or `bitcoind`/`bitcoin-qt` (on Linux).
 
-The first time you run version 0.15.0, your chainstate database will be converted to a
-new format, which will take anywhere from a few minutes to half an hour,
-depending on the speed of your machine.
+The first time you run version 0.15.0 or higher, your chainstate database will
+be converted to a new format, which will take anywhere from a few minutes to
+half an hour, depending on the speed of your machine.
+
+The file format of `fee_estimates.dat` changed in version 0.15.0. Hence, a
+downgrade from version 0.15.0 or upgrade to version 0.15.0 will cause all fee
+estimates to be discarded.
 
 Note that the block database format also changed in version 0.8.0 and there is no
 automatic upgrade code from before version 0.8 to version 0.15.0. Upgrading
@@ -56,66 +56,28 @@ frequently tested on them.
 Notable changes
 ===============
 
-GCC 4.8.x
---------------
-The minimum version of GCC required to compile Bitcoin Core is now 4.8. No effort will be
-made to support older versions of GCC. See discussion in issue #11732 for more information.
+GUI startup crash issue
+-------------------------
 
-HD-wallets by default
----------------------
-Due to a backward-incompatible change in the wallet database, wallets created
-with version 0.16.0 will be rejected by previous versions. Also, version 0.16.0
-will only create hierarchical deterministic (HD) wallets.
+After upgrade to 0.15.0, some clients would crash at startup because a custom
+fee setting was configured that no longer exists in the GUI. This is a minimal
+patch to avoid this issue from occuring.
 
-Replace-By-Fee by default in GUI
---------------------------------
-The send screen now uses BIP-125 RBF by default, regardless of `-walletrbf`.
-There is a checkbox to mark the transaction as final.
+0.15.0.1 Change log
+====================
 
-The RPC default remains unchanged: to use RBF, launch with `-walletrbf=1` or
-use the `replaceable` argument for individual transactions.
+-  #11332 `46c8d23` Fix possible crash with invalid nCustomFeeRadio in QSettings (achow101, TheBlueMatt)
 
-Custom wallet directories
----------------------
-The ability to specify a directory other than the default data directory in which to store
-wallets has been added. An existing directory can be specified using the `-walletdir=<dir>`
-argument. Wallets loaded via `-wallet` arguments must be in this wallet directory. Care should be taken
-when choosing a wallet directory location, as if it becomes unavailable during operation,
-funds may be lost.
-
-Default wallet directory change
---------------------------
-On new installations (if the data directory doesn't exist), wallets will now be stored in a
-new `wallets/` subdirectory inside the data directory. If this `wallets/` subdirectory
-doesn't exist (i.e. on existing nodes), the current datadir root is used instead, as it was.
-
-Low-level RPC changes
-----------------------
-- The deprecated RPC `getinfo` was removed. It is recommended that the more specific RPCs are used:
-  * `getblockchaininfo`
-  * `getnetworkinfo`
-  * `getwalletinfo`
-  * `getmininginfo`
-- The wallet RPC `getreceivedbyaddress` will return an error if called with an address not in the wallet.
-
-Changed command-line options
------------------------------
-- `-debuglogfile=<file>` can be used to specify an alternative debug logging file.
-
-Renamed script for creating JSON-RPC credentials
------------------------------
-The `share/rpcuser/rpcuser.py` script was renamed to `share/rpcauth/rpcauth.py`. This script can be
-used to create `rpcauth` credentials for a JSON-RPC user.
-
-
-- `dumpwallet` now includes hex-encoded scripts from the wallet in the dumpfile, and
-  `importwallet` now imports these scripts, but corresponding addresses may not be added
-  correctly or a manual rescan may be required to find relevant transactions.
+Also the manpages were updated, as this was forgotten for 0.15.0.
 
 Credits
 =======
 
 Thanks to everyone who directly contributed to this release:
 
+- Andrew Chow
+- Matt Corallo
+- Jonas Schnelli
+- Wladimir J. van der Laan
 
 As well as everyone that helped translating on [Transifex](https://www.transifex.com/projects/p/bitcoin/).
