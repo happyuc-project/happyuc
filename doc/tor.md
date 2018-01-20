@@ -43,7 +43,7 @@ config file):
 
 	HiddenServiceDir /var/lib/tor/happyuc-service/
 	HiddenServicePort 9528 127.0.0.1:9528
-	HiddenServicePort 19335 127.0.0.1:19335
+	HiddenServicePort 19531 127.0.0.1:19531
 
 The directory can be different of course, but (both) port numbers should be equal to
 your happyucd's P2P listen port (9528 by default).
