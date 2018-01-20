@@ -15,7 +15,7 @@ out collectively by the network. HappyUC Core is the name of open source
 software which enables the use of this currency.
 
 For more information, as well as an immediately useable, binary version of
-the HappyUC Core software, see [https://happyuc.org](https://happyuc.org).
+the HappyUC Core software, see [https://happyuc.org](https://happyuc.org). 
 
 License
 -------
