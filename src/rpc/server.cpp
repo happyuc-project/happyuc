@@ -25,7 +25,7 @@
 #include <memory> // for unique_ptr
 #include <unordered_map>
 
-static bool fRPCRunning = false;
+static bool fRPCRunning  = false;
 static bool fRPCInWarmup = true;
 static std::string rpcWarmupStatus("RPC server started");
 static CCriticalSection cs_rpcWarmup;
@@ -546,7 +546,7 @@ void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No timer handler registered for RPC");
     deadlineTimers.erase(name);
     LogPrint(BCLog::RPC, "queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
-    deadlineTimers.emplace(name, std::unique_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000)));
+	deadlineTimers.emplace(name, std::unique_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000)));
 }
 
 int RPCSerializationFlags()
